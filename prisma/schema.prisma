@@ -1,0 +1,114 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  orgName     String?
+  city        String?
+  college     String?
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  forms       Form[]   @relation("FormOwner")
+  responses   Response[]
+}
+
+// =========================================
+// FORM MODEL
+// =========================================
+model Form {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  status      FormStatus  @default(DRAFT)
+  publishedAt DateTime?
+  shareURL    String?     @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  ownerId     String
+  owner       User        @relation("FormOwner", fields: [ownerId], references: [id])
+  questions   Question[]
+  responses   Response[]
+}
+
+// =========================================
+// QUESTION MODEL
+// =========================================
+model Question {
+  id         String        @id @default(uuid())
+  formId     String
+  form       Form          @relation(fields: [formId], references: [id])
+  text       String
+  type       QuestionType
+  required   Boolean        @default(false)
+  options    String[]      // for MCQ, checkbox, dropdown
+
+  order      Int            // for sorting questions
+  answer Answer[]
+}
+
+// =========================================
+// RESPONSE MODEL
+// =========================================
+model Response {
+  id         String      @id @default(uuid())
+  formId     String
+  userId     String
+  createdAt  DateTime    @default(now())
+
+  // Relations
+  form       Form        @relation(fields: [formId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
+  answers    Answer[]
+}
+
+// =========================================
+// ANSWER MODEL
+// =========================================
+model Answer {
+  id          String     @id @default(uuid())
+  responseId  String
+  questionId  String
+  value       String
+
+  response    Response   @relation(fields: [responseId], references: [id])
+  question    Question   @relation(fields: [questionId], references: [id])
+}
+
+// =========================================
+// ENUMS
+// =========================================
+enum Role {
+  ORGANIZATION
+  USER
+  ADMIN
+}
+
+enum FormStatus {
+  DRAFT
+  LIVE
+  CLOSED
+}
+
+enum QuestionType {
+  SHORT_TEXT
+  PARAGRAPH
+  MULTIPLE_CHOICE
+  CHECKBOX
+  DROPDOWN
+  DATE
+  FILE_UPLOAD
+}
